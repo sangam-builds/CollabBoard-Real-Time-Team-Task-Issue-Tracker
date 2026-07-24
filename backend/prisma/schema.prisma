@@ -1,0 +1,168 @@
+// CollabBoard Prisma schema -- mirrors the original 001_init_schema.sql design,
+// now managed by Prisma migrations instead of a hand-written SQL file.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")   // pooled connection, used at runtime
+  directUrl = env("DIRECT_URL")     // direct connection, used only for migrations
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  displayName  String    @map("display_name")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  ownedTeams    Team[]         @relation("TeamOwner")
+  memberships   TeamMember[]
+  createdTasks  Task[]         @relation("TaskCreatedBy")
+  assignedTasks Task[]         @relation("TaskAssignee")
+  comments      Comment[]
+  activityLogs  ActivityLog[]
+  notifications Notification[]
+
+  @@map("users")
+}
+
+model Team {
+  id        Int      @id @default(autoincrement())
+  name      String
+  ownerId   Int      @map("owner_id")
+  owner     User     @relation("TeamOwner", fields: [ownerId], references: [id])
+  createdAt DateTime @default(now()) @map("created_at")
+
+  members      TeamMember[]
+  boards       Board[]
+  activityLogs ActivityLog[]
+
+  @@map("teams")
+}
+
+enum TeamRole {
+  owner
+  admin
+  member
+}
+
+model TeamMember {
+  id     Int      @id @default(autoincrement())
+  teamId Int      @map("team_id")
+  userId Int      @map("user_id")
+  role   TeamRole
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@map("team_members")
+}
+
+model Board {
+  id        Int      @id @default(autoincrement())
+  teamId    Int      @map("team_id")
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  team  Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  tasks Task[]
+
+  @@map("boards")
+}
+
+enum TaskStatus {
+  todo
+  in_progress
+  done
+}
+
+model Task {
+  id            Int        @id @default(autoincrement())
+  boardId       Int        @map("board_id")
+  title         String
+  description   String?
+  status        TaskStatus @default(todo)
+  assigneeId    Int?       @map("assignee_id")
+  createdBy     Int        @map("created_by")
+  priorityFlag  Int        @default(0) @map("priority_flag")
+  dueDate       DateTime?  @map("due_date") @db.Date
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @default(now()) @updatedAt @map("updated_at")
+
+  // tsvector isn't a native Prisma type -- mapped as Unsupported so Prisma leaves it
+  // alone in the DB. The column, trigger, and GIN index are added via raw SQL in a
+  // follow-up migration (see prisma/migrations/.../migration.sql notes below).
+  searchVector Unsupported("tsvector")? @map("search_vector")
+
+  board          Board             @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  creator        User              @relation("TaskCreatedBy", fields: [createdBy], references: [id])
+  assignee       User?             @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  comments       Comment[]
+  activityLogs   ActivityLog[]
+  notifications  Notification[]
+  dependsOn      TaskDependency[]  @relation("TaskDependent")
+  dependedOnBy   TaskDependency[]  @relation("TaskDependsOn")
+
+  @@index([boardId])
+  @@index([assigneeId])
+  @@map("tasks")
+}
+
+model TaskDependency {
+  taskId          Int @map("task_id")
+  dependsOnTaskId Int @map("depends_on_task_id")
+
+  task          Task @relation("TaskDependent", fields: [taskId], references: [id], onDelete: Cascade)
+  dependsOnTask Task @relation("TaskDependsOn", fields: [dependsOnTaskId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, dependsOnTaskId])
+  @@map("task_dependencies")
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  taskId    Int      @map("task_id")
+  authorId  Int      @map("author_id")
+  body      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@map("comments")
+}
+
+model ActivityLog {
+  id        Int      @id @default(autoincrement())
+  teamId    Int      @map("team_id")
+  userId    Int      @map("user_id")
+  action    String
+  taskId    Int?     @map("task_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  team Team  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task Task? @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@index([teamId, createdAt(sort: Desc)])
+  @@map("activity_logs")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  message   String
+  taskId    Int?     @map("task_id")
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task Task? @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}

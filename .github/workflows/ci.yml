@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: collabboard
+          POSTGRES_PASSWORD: collabboard
+          POSTGRES_DB: collabboard
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U collabboard"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - name: Apply Prisma migrations
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://collabboard:collabboard@localhost:5432/collabboard
+          DIRECT_URL: postgresql://collabboard:collabboard@localhost:5432/collabboard
+      - run: npm run lint
+      - run: npm test
+        env:
+          DATABASE_URL: postgresql://collabboard:collabboard@localhost:5432/collabboard
+          DIRECT_URL: postgresql://collabboard:collabboard@localhost:5432/collabboard
+          JWT_SECRET: ci_test_secret
+
+  frontend-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: npm run build
