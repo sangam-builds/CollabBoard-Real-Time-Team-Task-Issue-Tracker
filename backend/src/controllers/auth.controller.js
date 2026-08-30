@@ -32,6 +32,24 @@ const authController = {
       next(err);
     }
   },
+
+  async logout(req, res, next) {
+    try {
+      const token = req.token || req.headers.authorization?.split(' ')[1];
+      const result = await authService.logout(token, req.user);
+      res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async me(req, res, next) {
+    try {
+      res.status(200).json({ user: req.user });
+    } catch (err) {
+      next(err);
+    }
+  },
 };
 
 module.exports = authController;
