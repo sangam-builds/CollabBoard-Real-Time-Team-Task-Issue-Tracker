@@ -3,11 +3,103 @@
 @tailwind utilities;
 
 .material-symbols-outlined {
-  font-variation-settings:
-    'FILL' 0,
-    'wght' 400,
-    'GRAD' 0,
-    'opsz' 24;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.icon-fill-1 {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* Drag state subtle animation */
+@keyframes pulse-border {
+  0% { box-shadow: 0 0 0 0 rgba(20, 62, 228, 0.4); }
+  70% { box-shadow: 0 0 0 4px rgba(20, 62, 228, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(20, 62, 228, 0); }
+}
+
+.drag-active {
+  border: 2px solid #143EE4;
+  transform: scale(1.02) rotate(1deg);
+  transition: all 0.2s ease;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  z-index: 50;
+}
+
+/* Custom scrollbar for columns */
+.kanban-col::-webkit-scrollbar {
+  width: 4px;
+}
+
+.kanban-col::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.kanban-col::-webkit-scrollbar-thumb {
+  background-color: #c4c5d9;
+  border-radius: 4px;
+}
+
+/* Custom scrollbar for the timeline grid */
+.timeline-scroll::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.timeline-scroll::-webkit-scrollbar-track {
+  background: #faf8ff;
+}
+
+.timeline-scroll::-webkit-scrollbar-thumb {
+  background-color: #c4c5d9;
+  border-radius: 4px;
+}
+
+/* Grid lines for Timeline Gantt */
+.grid-bg {
+  background-image: linear-gradient(to right, #c4c5d9 1px, transparent 1px);
+  background-size: 40px 100%; /* Represents days (40px) */
+}
+
+.grid-bg-weeks {
+  background-image: linear-gradient(to right, #747687 1px, transparent 1px);
+  background-size: 280px 100%; /* Represents weeks (7 days * 40px = 280px) */
+  background-position: -1px 0;
+}
+
+/* Timeline Bar setup */
+.timeline-bar-container {
+  position: absolute;
+  height: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.timeline-bar-container:hover .drag-handle {
+  opacity: 1;
+}
+
+.drag-handle {
+  width: 6px;
+  height: 12px;
+  border-radius: 2px;
+  background-color: rgba(255, 255, 255, 0.7);
+  cursor: col-resize;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+/* Connector lines - SVG dependency layer */
+.dependency-line {
+  position: absolute;
+  z-index: 10;
+  pointer-events: none;
 }
 
 .dependency-graph {
@@ -43,4 +135,71 @@
   }
 }
 
+/* Minimal custom scrollbar for calendar */
+.cal-scroll::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.cal-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.cal-scroll::-webkit-scrollbar-thumb {
+  background: #e0e2ef;
+  border-radius: 4px;
+}
 
+/* Calendar Grid specific styling */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-auto-rows: 140px;
+  gap: 1px;
+  background-color: #c4c5d9;
+}
+
+.calendar-cell {
+  background-color: #ffffff;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: background-color 0.2s;
+}
+
+.calendar-cell:hover {
+  background-color: #f3f4f9;
+}
+
+.calendar-cell.out-of-month {
+  background-color: #faf8ff;
+  color: #747687;
+}
+
+.calendar-cell.today {
+  position: relative;
+}
+
+.calendar-cell.today::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border: 2px solid #143ee4;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Custom scrollbar for list view */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #c4c5d9;
+  border-radius: 4px;
+}
+.table-row-hover:hover {
+  background-color: #f3f4f9;
+}
