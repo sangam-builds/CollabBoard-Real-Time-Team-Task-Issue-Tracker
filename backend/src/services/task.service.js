@@ -2,6 +2,52 @@ const taskRepository = require('../repositories/task.repository');
 const prisma = require('../config/db');
 const eventBus = require('../events/eventBus');
 
+function findCyclePath(remainingNodeIds, adjacency) {
+  const visited = new Set();
+  const recStack = new Map();
+  const path = [];
+
+  const dfs = (nodeId) => {
+    visited.add(nodeId);
+    recStack.set(nodeId, path.length);
+    path.push(nodeId);
+
+    for (const neighbor of adjacency.get(nodeId) || []) {
+      if (!remainingNodeIds.has(neighbor)) continue;
+      if (!visited.has(neighbor)) {
+        const found = dfs(neighbor);
+        if (found) return found;
+      } else if (recStack.has(neighbor)) {
+        const startIndex = recStack.get(neighbor);
+        const cycle = path.slice(startIndex);
+        cycle.push(neighbor);
+        return cycle;
+      }
+    }
+
+    path.pop();
+    recStack.delete(nodeId);
+    return null;
+  };
+
+  for (const id of remainingNodeIds) {
+    if (!visited.has(id)) {
+      const cycleIds = dfs(id);
+      if (cycleIds) return cycleIds;
+    }
+  }
+  return null;
+}
+
+function hasPath(from, target, adj, visited = new Set()) {
+  if (from === target) return true;
+  visited.add(from);
+  for (const neighbor of adj.get(from) || []) {
+    if (!visited.has(neighbor) && hasPath(neighbor, target, adj, visited)) return true;
+  }
+  return false;
+}
+
 const taskService = {
   async createTask({ boardId, title, description, createdBy, assigneeId, dueDate, teamId }) {
     const task = await taskRepository.create({ boardId, title, description, createdBy, assigneeId, dueDate });
@@ -208,41 +254,8 @@ const taskService = {
       const remainingNodeIds = new Set(tasks.map((t) => t.id).filter((id) => !order.includes(id)));
       const taskById = new Map(tasks.map((t) => [t.id, t]));
 
-      // DFS to find the cycle within remaining nodes
-      const visited = new Set();
-      const recStack = new Map();
-      const path = [];
-      let cycleIds = null;
-
-      function dfs(nodeId) {
-        visited.add(nodeId);
-        recStack.set(nodeId, path.length);
-        path.push(nodeId);
-
-        for (const neighbor of adjacency.get(nodeId) || []) {
-          if (!remainingNodeIds.has(neighbor)) continue;
-          if (!visited.has(neighbor)) {
-            const found = dfs(neighbor);
-            if (found) return found;
-          } else if (recStack.has(neighbor)) {
-            const startIndex = recStack.get(neighbor);
-            const cycle = path.slice(startIndex);
-            cycle.push(neighbor);
-            return cycle;
-          }
-        }
-
-        path.pop();
-        recStack.delete(nodeId);
-        return null;
-      }
-
-      for (const id of remainingNodeIds) {
-        if (!visited.has(id)) {
-          cycleIds = dfs(id);
-          if (cycleIds) break;
-        }
-      }
+      // DFS to find the cycle within remaining nodes using top-level helper
+      const cycleIds = findCyclePath(remainingNodeIds, adjacency);
 
       const cycleTasks = (cycleIds || Array.from(remainingNodeIds)).map((id) => ({
         id,
@@ -364,16 +377,7 @@ const taskService = {
       adj.get(depends_on_task_id)?.push(task_id);
     }
 
-    // Check if path exists from taskId to dependsOnTaskId
-    const visited = new Set();
-    function hasPath(from, target) {
-      if (from === target) return true;
-      visited.add(from);
-      for (const neighbor of adj.get(from) || []) {
-        if (!visited.has(neighbor) && hasPath(neighbor, target)) return true;
-      }
-      return false;
-    }
+    // Check if path exists from taskId to dependsOnTaskId using top-level helper
 
     if (hasPath(taskId, dependsOnTaskId)) {
       throw Object.assign(
