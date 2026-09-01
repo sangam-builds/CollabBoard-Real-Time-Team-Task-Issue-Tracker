@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function CalendarCell({ cell }) {
+export default function CalendarCell({ cell, onEventClick }) {
   const { day, isOutOfMonth, isToday, events = [], moreCount } = cell;
 
   const cellClasses = [
@@ -28,7 +28,8 @@ export default function CalendarCell({ cell }) {
       {events.map((ev) => (
         <div
           key={ev.id}
-          className={`mt-1 px-2 py-0.5 rounded font-label-mono text-[10px] truncate cursor-pointer ${ev.className}`}
+          onClick={() => onEventClick && onEventClick(ev)}
+          className={`mt-1 px-2 py-0.5 rounded font-label-mono text-[10px] truncate cursor-pointer transition-transform hover:scale-[1.02] ${ev.className}`}
           title={ev.title}
         >
           {ev.title}

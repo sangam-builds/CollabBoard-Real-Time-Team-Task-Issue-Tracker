@@ -15,13 +15,53 @@ const taskRepository = {
   },
 
   async findById(id) {
-    return prisma.task.findUnique({ where: { id } });
+    return prisma.task.findUnique({
+      where: { id },
+      include: {
+        assignee: { select: { id: true, displayName: true, email: true } },
+        creator: { select: { id: true, displayName: true, email: true } },
+        comments: {
+          include: { author: { select: { id: true, displayName: true, email: true } } },
+          orderBy: { createdAt: 'asc' },
+        },
+        dependsOn: { select: { dependsOnTaskId: true } },
+      },
+    });
   },
 
   async findByBoard(boardId) {
     return prisma.task.findMany({
       where: { boardId },
+      include: {
+        assignee: { select: { id: true, displayName: true, email: true } },
+        creator: { select: { id: true, displayName: true, email: true } },
+        comments: {
+          include: { author: { select: { id: true, displayName: true, email: true } } },
+          orderBy: { createdAt: 'asc' },
+        },
+        dependsOn: { select: { dependsOnTaskId: true } },
+      },
       orderBy: { createdAt: 'desc' },
+    });
+  },
+
+  async update(taskId, data) {
+    return prisma.task.update({
+      where: { id: taskId },
+      data: {
+        ...data,
+        updatedAt: new Date(),
+      },
+      include: {
+        assignee: { select: { id: true, displayName: true, email: true } },
+        creator: { select: { id: true, displayName: true, email: true } },
+      },
+    });
+  },
+
+  async delete(taskId) {
+    return prisma.task.delete({
+      where: { id: taskId },
     });
   },
 
@@ -29,6 +69,10 @@ const taskRepository = {
     return prisma.task.update({
       where: { id: taskId },
       data: { assigneeId, updatedAt: new Date() },
+      include: {
+        assignee: { select: { id: true, displayName: true, email: true } },
+        creator: { select: { id: true, displayName: true, email: true } },
+      },
     });
   },
 
@@ -36,6 +80,10 @@ const taskRepository = {
     return prisma.task.update({
       where: { id: taskId },
       data: { status, updatedAt: new Date() },
+      include: {
+        assignee: { select: { id: true, displayName: true, email: true } },
+        creator: { select: { id: true, displayName: true, email: true } },
+      },
     });
   },
 
@@ -55,9 +103,58 @@ const taskRepository = {
     };
   },
 
-  // tsvector isn't queryable through Prisma's normal API (it's an Unsupported type),
-  // so full-text search stays a raw query -- everything else in this file uses
-  // normal Prisma calls.
+  async addDependency({ taskId, dependsOnTaskId }) {
+    return prisma.taskDependency.create({
+      data: { taskId, dependsOnTaskId },
+      include: {
+        task: { select: { id: true, title: true, status: true } },
+        dependsOnTask: { select: { id: true, title: true, status: true } },
+      },
+    });
+  },
+
+  async removeDependency({ taskId, dependsOnTaskId }) {
+    return prisma.taskDependency.delete({
+      where: {
+        taskId_dependsOnTaskId: { taskId, dependsOnTaskId },
+      },
+    });
+  },
+
+  async findDependency(taskId, dependsOnTaskId) {
+    return prisma.taskDependency.findUnique({
+      where: {
+        taskId_dependsOnTaskId: { taskId, dependsOnTaskId },
+      },
+    });
+  },
+
+  async getTaskDependencies(taskId) {
+    const [blockedBy, blocks] = await Promise.all([
+      prisma.taskDependency.findMany({
+        where: { taskId },
+        include: {
+          dependsOnTask: {
+            select: { id: true, title: true, status: true, priorityFlag: true, dueDate: true, assignee: { select: { displayName: true } } },
+          },
+        },
+      }),
+      prisma.taskDependency.findMany({
+        where: { dependsOnTaskId: taskId },
+        include: {
+          task: {
+            select: { id: true, title: true, status: true, priorityFlag: true, dueDate: true, assignee: { select: { displayName: true } } },
+          },
+        },
+      }),
+    ]);
+
+    return {
+      blockedBy: blockedBy.map((b) => b.dependsOnTask),
+      blocks: blocks.map((b) => b.task),
+    };
+  },
+
   async search(boardId, query) {
     return prisma.$queryRaw`
       SELECT *, ts_rank(search_vector, plainto_tsquery('english', ${query})) AS rank

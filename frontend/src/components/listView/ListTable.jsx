@@ -1,12 +1,15 @@
 import React, { useRef, useEffect } from 'react';
 import ListRow from './ListRow';
+import { useRole } from '../../context/RoleContext';
 
 export default function ListTable({
   tasks = [],
   selectedIds = new Set(),
   onToggleTask,
   onToggleAll,
+  onRowClick,
 }) {
+  const { canBulkEdit } = useRole();
   const selectAllRef = useRef(null);
 
   const allSelected = tasks.length > 0 && tasks.every((t) => selectedIds.has(t.id));
@@ -23,17 +26,20 @@ export default function ListTable({
       <table className="w-full text-left border-collapse whitespace-nowrap">
         <thead>
           <tr className="border-b border-outline-variant bg-surface-bright">
-            <th className="py-3 px-4 w-12">
-              <input
-                ref={selectAllRef}
-                type="checkbox"
-                checked={allSelected}
-                onChange={(e) => onToggleAll(e.target.checked)}
-                className="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4 cursor-pointer"
-                id="select-all"
-                title="Select all"
-              />
-            </th>
+            {/* Checkbox Column (Owner & Admin only per Section 7; disabled/hidden for Members) */}
+            {canBulkEdit && (
+              <th className="py-3 px-4 w-12">
+                <input
+                  ref={selectAllRef}
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={(e) => onToggleAll(e.target.checked)}
+                  className="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4 cursor-pointer"
+                  id="select-all"
+                  title="Select all for bulk edit"
+                />
+              </th>
+            )}
             <th className="py-3 px-4 font-label-mono text-label-mono tracking-[0.05em] uppercase text-secondary">
               Task name
             </th>
@@ -61,6 +67,7 @@ export default function ListTable({
               task={task}
               isSelected={selectedIds.has(task.id)}
               onToggle={onToggleTask}
+              onRowClick={onRowClick}
               isLast={idx === tasks.length - 1}
             />
           ))}

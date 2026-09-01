@@ -8,6 +8,7 @@ const { apiLimiter } = require('./middleware/rateLimiter.middleware');
 
 const authRoutes = require('./routes/auth.routes');
 const taskRoutes = require('./routes/task.routes');
+const teamRoutes = require('./routes/team.routes');
 const healthRoutes = require('./routes/health.routes');
 
 function createApp(io = null) {
@@ -34,6 +35,7 @@ function createApp(io = null) {
   app.use(healthRoutes);
   app.use('/api/auth', authRoutes);
   app.use('/api', taskRoutes);
+  app.use('/api', teamRoutes);
 
   app.use(errorMiddleware);
 

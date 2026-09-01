@@ -7,11 +7,16 @@ const permissionService = {
     return teamRepository.getUserRole(userId, teamId);
   },
 
+  async getTeamIdForBoard(boardId) {
+    return teamRepository.getTeamIdForBoard(boardId);
+  },
+
   // Resolves which team a request is "about", based on whichever param is present.
   async resolveTeamIdForRequest(req) {
     if (req.params.teamId) return Number(req.params.teamId);
     if (req.params.boardId) return teamRepository.getTeamIdForBoard(Number(req.params.boardId));
     if (req.params.taskId) return teamRepository.getTeamIdForTask(Number(req.params.taskId));
+    if (req.params.id) return teamRepository.getTeamIdForTask(Number(req.params.id));
     throw Object.assign(new Error('Cannot resolve team for this request'), { status: 400 });
   },
 

@@ -1,25 +1,30 @@
 import React from 'react';
+import { useRole } from '../../context/RoleContext';
 
-export default function ListRow({ task, isSelected, onToggle, isLast }) {
+export default function ListRow({ task, isSelected, onToggle, onRowClick, isLast }) {
+  const { canBulkEdit } = useRole();
   const { taskName, assignee, status, statusClass, priority, priorityClass, dueDate, labels } = task;
 
   return (
     <tr
+      onClick={() => onRowClick && onRowClick(task)}
       className={`${
         isLast ? '' : 'border-b border-outline-variant'
-      } table-row-hover group transition-colors ${
+      } table-row-hover group transition-colors cursor-pointer ${
         isSelected ? 'bg-surface-container-high/60' : ''
       }`}
     >
-      {/* Checkbox */}
-      <td className="py-3 px-4">
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={() => onToggle(task.id)}
-          className="row-checkbox rounded border-outline-variant text-primary focus:ring-primary w-4 h-4 cursor-pointer"
-        />
-      </td>
+      {/* Checkbox (Owner & Admin only per Section 7) */}
+      {canBulkEdit && (
+        <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => onToggle(task.id)}
+            className="row-checkbox rounded border-outline-variant text-primary focus:ring-primary w-4 h-4 cursor-pointer"
+          />
+        </td>
+      )}
 
       {/* Task Name */}
       <td className="py-3 px-4 text-on-surface font-medium">{taskName}</td>

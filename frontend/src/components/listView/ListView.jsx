@@ -3,7 +3,7 @@ import ListToolbar from './ListToolbar';
 import ListTable from './ListTable';
 import { mockListViewData } from '../../data/mockListViewData';
 
-export default function ListView({ data = mockListViewData }) {
+export default function ListView({ data = mockListViewData, onSelectTask }) {
   const [tasks, setTasks] = useState(data.tasks);
   const [selectedIds, setSelectedIds] = useState(new Set());
 
@@ -56,6 +56,16 @@ export default function ListView({ data = mockListViewData }) {
       <ListToolbar
         selectedCount={selectedIds.size}
         onBulkAction={handleBulkAction}
+        onExportCsv={() => {
+          const csv = 'Task Name,Assignee,Status,Priority,Due Date\n' + tasks.map((t) => `"${t.taskName}","${t.assignee?.name}","${t.status}","${t.priority}","${t.dueDate}"`).join('\n');
+          const encoded = encodeURI('data:text/csv;charset=utf-8,' + csv);
+          const a = document.createElement('a');
+          a.href = encoded;
+          a.download = 'tasks_list.csv';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }}
       />
 
       {/* Data Table */}
@@ -64,6 +74,17 @@ export default function ListView({ data = mockListViewData }) {
         selectedIds={selectedIds}
         onToggleTask={handleToggleTask}
         onToggleAll={handleToggleAll}
+        onRowClick={(task) => {
+          if (onSelectTask) {
+            onSelectTask({
+              id: task.id,
+              title: task.taskName,
+              category: 'List',
+              dueDate: task.dueDate,
+              assignees: [task.assignee],
+            });
+          }
+        }}
       />
     </main>
   );

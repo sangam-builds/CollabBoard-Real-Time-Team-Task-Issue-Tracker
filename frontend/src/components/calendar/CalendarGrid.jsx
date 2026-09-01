@@ -4,6 +4,7 @@ import CalendarCell from './CalendarCell';
 export default function CalendarGrid({
   daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
   cells = [],
+  onEventClick,
 }) {
   return (
     <div className="max-w-[1400px] mx-auto bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden flex flex-col h-full shadow-sm">
@@ -22,7 +23,7 @@ export default function CalendarGrid({
       {/* Calendar Grid Cells */}
       <div className="calendar-grid flex-1">
         {cells.map((cell) => (
-          <CalendarCell key={cell.id} cell={cell} />
+          <CalendarCell key={cell.id} cell={cell} onEventClick={onEventClick} />
         ))}
       </div>
     </div>
